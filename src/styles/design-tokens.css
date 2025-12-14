@@ -1,0 +1,87 @@
+@import "tailwindcss/theme";
+
+@theme {
+  /* Colors - Fluent/Material inspired */
+  --color-surface: var(--surface, #0b1020);
+  --color-surface-alt: var(--surface-alt, #111728);
+  --color-surface-soft: var(--surface-soft, #171d30);
+  --color-border-subtle: var(--border-subtle, #232a40);
+
+  --color-primary: var(--primary, #4f46e5);
+  --color-primary-soft: var(--primary-soft, color-mix(in srgb, var(--primary) 12%, transparent));
+  --color-primary-strong: var(--primary-strong, #6366f1);
+
+  --color-accent: var(--accent, #22c55e);
+  --color-danger: var(--danger, #ef4444);
+  --color-warning: var(--warning, #eab308);
+  --color-info: var(--info, #0ea5e9);
+
+  --color-fg: var(--fg, #e5e7eb);
+  --color-fg-muted: var(--fg-muted, #9ca3af);
+  --color-fg-soft: var(--fg-soft, #6b7280);
+
+  --color-backdrop: color-mix(in srgb, black 60%, transparent);
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 999px;
+
+  /* Spacing scale (multipliers of 4px) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+
+    --surface: #020617;
+    --surface-alt: #020617;
+    --surface-soft: #020617;
+    --border-subtle: #111827;
+
+    --primary: #4f46e5;
+    --primary-soft: color-mix(in srgb, var(--primary) 12%, transparent);
+    --primary-strong: #6366f1;
+
+    --accent: #22c55e;
+    --danger: #ef4444;
+    --warning: #eab308;
+    --info: #0ea5e9;
+
+    --fg: #e5e7eb;
+    --fg-muted: #9ca3af;
+    --fg-soft: #6b7280;
+  }
+
+  body {
+    @apply bg-[color:var(--color-surface)] text-[color:var(--color-fg)] font-[var(--font-sans)];
+  }
+}
+
+

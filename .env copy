@@ -1,0 +1,4 @@
+SUPABASE_URL="https://jyoiswzrocbdigxaodxi.supabase.co"
+SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5b2lzd3pyb2NiZGlneGFvZHhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5NDQ0OTAsImV4cCI6MjA4MDUyMDQ5MH0.yd0qz-17J4WGQ_rx2V0rjU5K7S_BpcHkTXnisec64vk"
+SUPABASE_DB_URL="postgresql://postgres:xammax-jenhup-2Kyjsy@db.jyoiswzrocbdigxaodxi.supabase.co:5432/postgres"
+OPENROUTER_API_KEY="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"

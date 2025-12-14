@@ -1,0 +1,15 @@
+---
+import AppShell from "../layouts/AppShell.astro";
+import HomePage from "../components/home/HomePage.tsx";
+import { listActiveGames } from "../services/gameService";
+import { mapGamesListResponseToVM } from "../viewModels/homeViewModels";
+
+const games = await listActiveGames();
+const initialGames = mapGamesListResponseToVM({ items: games });
+---
+
+<AppShell>
+  <HomePage client:load initialGames={initialGames} />
+</AppShell>
+
+
