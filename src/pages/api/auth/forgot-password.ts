@@ -75,8 +75,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers: request.headers,
     });
 
-    const origin = new URL(request.url).origin;
-    const redirectTo = `${origin}/auth/reset-password`;
+    // Używamy PUBLIC_SITE_URL, jeśli jest ustawiony (np. domena produkcyjna),
+    // w przeciwnym razie bierzemy origin z aktualnego żądania (np. localhost).
+    const publicSiteUrl =
+      import.meta.env.PUBLIC_SITE_URL ?? new URL(request.url).origin;
+    const redirectTo = `${publicSiteUrl}/auth/reset-password`;
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,

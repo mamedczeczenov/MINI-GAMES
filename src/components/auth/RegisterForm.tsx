@@ -49,6 +49,7 @@ const RegisterForm: FC<RegisterFormProps> = ({
   const [errors, setErrors] = useState<Partial<RegisterFormValues>>({});
   const [status, setStatus] = useState<RegisterFormStatus>("idle");
   const [formError, setFormError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const validate = (nextValues: RegisterFormValues) => {
     const nextErrors: Partial<RegisterFormValues> = {};
@@ -92,6 +93,7 @@ const RegisterForm: FC<RegisterFormProps> = ({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);
+    setInfoMessage(null);
 
     const isValid = validate(values);
     if (!isValid) {
@@ -105,6 +107,9 @@ const RegisterForm: FC<RegisterFormProps> = ({
       try {
         await onSubmit(values);
         setStatus("success");
+        setInfoMessage(
+          "Konto zostało utworzone. Sprawdź swoją skrzynkę e‑mail i kliknij link aktywacyjny, aby potwierdzić konto.",
+        );
       } catch {
         setStatus("error");
         setFormError("Nie udało się utworzyć konta. Spróbuj ponownie.");
@@ -120,6 +125,9 @@ const RegisterForm: FC<RegisterFormProps> = ({
       });
 
       setStatus("success");
+       setInfoMessage(
+        "Konto zostało utworzone. Sprawdź swoją skrzynkę e‑mail i kliknij link aktywacyjny, aby potwierdzić konto.",
+      );
       onSuccess?.(result);
     } catch (error) {
       setStatus("error");
@@ -225,6 +233,15 @@ const RegisterForm: FC<RegisterFormProps> = ({
           className="rounded-md border border-red-500/40 bg-red-950/40 px-3 py-2 text-red-200"
         >
           {formError}
+        </Text>
+      )}
+
+      {infoMessage && (
+        <Text
+          variant="body-small"
+          className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-slate-200"
+        >
+          {infoMessage}
         </Text>
       )}
 
