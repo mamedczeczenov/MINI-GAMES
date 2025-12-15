@@ -50,7 +50,7 @@ if (!apiKey) {
 }
 
 export const openRouterService = new OpenRouterService({
-  apiKey: "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",
+  apiKey,
   defaultModel,
   defaultParams: {
     temperature: 0.7,
