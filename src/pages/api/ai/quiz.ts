@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { openRouterService } from "../../../openrouter.config";
+import { getOpenRouterService } from "../../../openrouter.config";
 import { OpenRouterError } from "../../../openrouter.service";
 
 export const prerender = false;
@@ -43,6 +43,8 @@ function jsonResponse<T>(body: T, init?: ResponseInit): Response {
 
 export const GET: APIRoute = async () => {
   try {
+    const openRouterService = getOpenRouterService();
+
     const messages = openRouterService.buildSystemAndUserMessages({
       systemPrompt:
         "Jesteś luźnym, ale precyzyjnym generatorem quizów wielokrotnego wyboru po polsku. " +

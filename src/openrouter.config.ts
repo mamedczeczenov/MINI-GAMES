@@ -1,4 +1,4 @@
-import { OpenRouterService } from "./openrouter.service";
+import { OpenRouterService, OpenRouterError } from "./openrouter.service";
 
 /**
  * Pojedyncza, współdzielona instancja OpenRouterService skonfigurowana
@@ -9,11 +9,6 @@ import { OpenRouterService } from "./openrouter.service";
  *   oraz z rzeczywistych zmiennych środowiskowych,
  * - plik powinien być używany wyłącznie po stronie serwera (endpointy Astro / middleware).
  */
-const apiKey =
-  import.meta.env.OPENROUTER_API_KEY ??
-  import.meta.env.OPENROUTER ??
-  "";
-
 const defaultModel =
   import.meta.env.OPENROUTER_DEFAULT_MODEL ?? "openai/gpt-4o-mini";
 
@@ -35,33 +30,65 @@ const siteUrl =
   import.meta.env.CF_PAGES_URL ??
   (import.meta.env.DEV ? "http://localhost:4321" : "https://mini-games.pages.dev");
 
-// Prosty log pomocniczy do debugowania konfiguracji (tylko w dev).
-if (!apiKey) {
-  console.warn(
-    "[OpenRouter] Brak klucza API (OPENROUTER_API_KEY / OPENROUTER) w import.meta.env.",
-  );
-} else {
-  // Nie wypisujemy całego klucza, tylko prefiks – ze względów bezpieczeństwa.
-  console.log(
-    "[OpenRouter] Załadowano klucz API, prefiks:",
-    String(apiKey).slice(0, 8),
-    "********",
-  );
+let cachedService: OpenRouterService | null = null;
+
+/**
+ * Zwraca współdzieloną instancję OpenRouterService.
+ *
+ * Uwaga:
+ * - Inicjalizacja jest leniwa (on‑demand), żeby uniknąć błędów już na etapie
+ *   ładowania workera na Cloudflare, gdy brakuje klucza API.
+ * - Błąd MISSING_API_KEY jest wtedy łapany w handlerach API (np. /api/ai/quiz)
+ *   i zamieniany na kontrolowaną odpowiedź JSON zamiast 502 z Cloudflare.
+ */
+export function getOpenRouterService(): OpenRouterService {
+  if (cachedService) {
+    return cachedService;
+  }
+
+  const apiKey =
+    import.meta.env.OPENROUTER_API_KEY ??
+    import.meta.env.OPENROUTER ??
+    "";
+
+  // Prosty log pomocniczy do debugowania konfiguracji (tylko w dev).
+  if (!apiKey && import.meta.env.DEV) {
+    console.warn(
+      "[OpenRouter] Brak klucza API (OPENROUTER_API_KEY / OPENROUTER) w import.meta.env.",
+    );
+  } else if (apiKey && import.meta.env.DEV) {
+    // Nie wypisujemy całego klucza, tylko prefiks – ze względów bezpieczeństwa.
+    console.log(
+      "[OpenRouter] Załadowano klucz API, prefiks:",
+      String(apiKey).slice(0, 8),
+      "********",
+    );
+  }
+
+  if (!apiKey) {
+    // Rzucamy kontrolowany błąd, który endpoint może przekonwertować na 500 z JSON-em,
+    // zamiast doprowadzić do awarii całego workera (Cloudflare 502).
+    throw new OpenRouterError(
+      "MISSING_API_KEY",
+      "Brak konfiguracji klucza OpenRouter API (OPENROUTER_API_KEY).",
+    );
+  }
+
+  cachedService = new OpenRouterService({
+    apiKey,
+    defaultModel,
+    defaultParams: {
+      temperature: 0.7,
+      maxTokens: 512,
+    },
+    requestTimeoutMs: 15_000,
+    siteUrl,
+    logger: (message, meta) => {
+      // Prosty logger serwerowy – nie wypisujemy promptów ani pełnych odpowiedzi.
+      console.error("[OpenRouterService]", message, meta ?? "");
+    },
+  });
+
+  return cachedService;
 }
-
-export const openRouterService = new OpenRouterService({
-  apiKey,
-  defaultModel,
-  defaultParams: {
-    temperature: 0.7,
-    maxTokens: 512,
-  },
-  requestTimeoutMs: 15_000,
-  siteUrl,
-  logger: (message, meta) => {
-    // Prosty logger serwerowy – nie wypisujemy promptów ani pełnych odpowiedzi.
-    console.error("[OpenRouterService]", message, meta ?? "");
-  },
-});
-
 

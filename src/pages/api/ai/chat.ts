@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { openRouterService } from "../../../openrouter.config";
+import { getOpenRouterService } from "../../../openrouter.config";
 import { OpenRouterError } from "../../../openrouter.service";
 import type { ChatMessage } from "../../../openrouter.service";
 
@@ -67,6 +67,8 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
+    const openRouterService = getOpenRouterService();
+
     const messages = openRouterService.buildSystemAndUserMessages({
       systemPrompt,
       userPrompt,
