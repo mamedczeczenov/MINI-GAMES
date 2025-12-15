@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: 'npm'
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -27,7 +27,7 @@ jobs:
         run: npm run lint
 
   test:
-    name: Run Unit Tests 
+    name: Run Unit Tests
     needs: lint
     runs-on: ubuntu-latest
     steps:
@@ -54,7 +54,7 @@ jobs:
       contents: read
       deployments: write
     environment:
-      name: production 
+      name: production
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -83,6 +83,3 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }} # Secret needed for Cloudflare Account ID
           command: pages deploy dist --project-name='mini-games' # Use the command input
           gitHubToken: ${{ secrets.GITHUB_TOKEN }} # Optional: Adds commit details to deployments
-        run: npm run build
-
-
