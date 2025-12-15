@@ -1,15 +1,28 @@
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import HomePage from "./HomePage";
 
 describe("HomePage", () => {
-  it("renders default intro title and description", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("renders default intro title and description", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ items: [] }),
+      }),
+    );
+
     render(<HomePage />);
 
     expect(
-      screen.getByText("Rywalizuj w mini‑grach i wspinaj się w rankingach"),
+      await screen.findByText("Rywalizuj w mini‑grach i wspinaj się w rankingach"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
+      await screen.findByText(
         "Wybierz jedną z dostępnych gier, zagraj w trybie gościa lub jako zalogowany gracz i sprawdź swoje wyniki w tygodniowych rankingach.",
       ),
     ).toBeInTheDocument();

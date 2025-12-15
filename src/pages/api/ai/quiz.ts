@@ -18,6 +18,9 @@ interface QuizResponseBody {
   questions: QuizQuestion[];
 }
 
+const QUIZ_JSON_EXAMPLE =
+  '{"questions":[{"id":1,"question":"Treść pytania 1","answers":{"A":"Odpowiedź A","B":"Odpowiedź B","C":"Odpowiedź C","D":"Odpowiedź D"},"correctAnswer":"A","explanation":"Krótko wyjaśnij, dlaczego ta odpowiedź jest poprawna"}]}';
+
 type QuizErrorCode =
   | "OPENROUTER_CONFIG_ERROR"
   | "OPENROUTER_NETWORK_ERROR"
@@ -48,7 +51,7 @@ export const GET: APIRoute = async () => {
         "Poziom trudności ma być losowy: od prostych pytań szkolnych po trudne pytania na poziomie eksperta. " +
         "Styl ma być lekko żartobliwy, ale treści mają być „smaczne” i kulturalne. " +
         "ZWRACASZ WYŁĄCZNIE POPRAWNY JSON w dokładnie takim formacie (bez dodatkowego tekstu, komentarzy ani znaczników): " +
-        '{\"questions\":[{\"id\":1,\"question\":\"Treść pytania 1\",\"answers\":{\"A\":\"Odpowiedź A\",\"B\":\"Odpowiedź B\",\"C\":\"Odpowiedź C\",\"D\":\"Odpowiedź D\"},\"correctAnswer\":\"A\",\"explanation\":\"Krótko wyjaśnij, dlaczego ta odpowiedź jest poprawna\"}]} ' +
+        `${QUIZ_JSON_EXAMPLE} ` +
         "– oczywiście z pięcioma różnymi pytaniami (id od 1 do 5) oraz dokładnie jedną poprawną odpowiedzią w każdym pytaniu.",
       userPrompt:
         "Wygeneruj nowy quiz mieszany (5 pytań, A–D, dokładnie jedna poprawna odpowiedź w każdym pytaniu).",

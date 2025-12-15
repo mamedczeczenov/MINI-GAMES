@@ -103,7 +103,6 @@ const AiQuiz: FC = () => {
 
   useEffect(() => {
     void loadQuiz();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAnswerClick = (answer: AnswerId) => {

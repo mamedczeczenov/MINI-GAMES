@@ -58,13 +58,6 @@ const ReactionTimeTest: FC = () => {
     scheduleReadyPhase();
   };
 
-  const resetGame = () => {
-    clearPendingTimeout();
-    startTimeRef.current = null;
-    setReactionTime(null);
-    setPhase("idle");
-  };
-
   const handleClickArea = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
 
@@ -139,9 +132,6 @@ const ReactionTimeTest: FC = () => {
       clearPendingTimeout();
     };
   }, []);
-
-  const isIdleLike =
-    phase === "idle" || phase === "result" || phase === "false_start";
 
   const handleSaveScore = async () => {
     if (reactionTime == null || isSaving || phase !== "result") {

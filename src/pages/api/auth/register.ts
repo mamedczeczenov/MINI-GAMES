@@ -137,8 +137,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (error || !data?.user) {
       const status = (error as any)?.status ?? 400;
       const message = (error as any)?.message ?? "Nie udało się utworzyć konta.";
+      const supabaseCode = (error as any)?.code as string | undefined;
       const normalizedMessage = String(message).toLowerCase();
 
+      // E-mail już istnieje w bazie.
       if (
         status === 400 &&
         (normalizedMessage.includes("already registered") ||
@@ -154,6 +156,23 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         return jsonResponse(errorBody, { status: 409 });
       }
 
+      // Błąd walidacji adresu e‑mail po stronie Supabase (np. blokada domeny).
+      if (
+        status === 400 &&
+        (supabaseCode === "email_address_invalid" ||
+          (normalizedMessage.includes("email address") &&
+            normalizedMessage.includes("invalid")))
+      ) {
+        const errorBody: ErrorResponseBody = {
+          code: "VALIDATION_ERROR",
+          message: "Adres e‑mail jest nieprawidłowy.",
+          errors: {
+            email: "Adres e‑mail jest nieprawidłowy.",
+          },
+        };
+        return jsonResponse(errorBody, { status: 400 });
+      }
+
       console.error("Supabase auth error during register:", error);
 
       const errorBody: ErrorResponseBody = {
@@ -166,45 +185,57 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const userId = data.user.id;
     const userEmail = data.user.email ?? email;
 
-    // Utwórz profil prezentacyjny powiązany z użytkownikiem.
-    const {
-      data: profile,
-      error: profileError,
-    } = await supabase
-      .from("profiles")
-      .insert({
-        user_id: userId,
-        nick: rawNick,
-      })
-      .select("nick, user_id")
-      .maybeSingle();
+    // Jeśli Supabase nie zwrócił sesji (np. wymagane potwierdzenie e‑maila),
+    // pomiń tworzenie profilu – w przeciwnym razie RLS zablokuje INSERT.
+    let profileNick = rawNick;
 
-    if (profileError) {
-      // Jeśli unikalność nicka została złamana równolegle – zmapuj na konflikt.
-      const code = (profileError as any)?.code;
-      if (code === "23505") {
+    if (data.session) {
+      // Utwórz profil prezentacyjny powiązany z użytkownikiem.
+      const {
+        data: profile,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .insert({
+          user_id: userId,
+          nick: rawNick,
+        })
+        .select("nick, user_id")
+        .maybeSingle();
+
+      if (profileError) {
+        // Jeśli unikalność nicka została złamana równolegle – zmapuj na konflikt.
+        const code = (profileError as any)?.code;
+        if (code === "23505") {
+          const errorBody: ErrorResponseBody = {
+            code: "NICK_TAKEN",
+            message: "Nick jest już zajęty.",
+            errors: {
+              nick: "Nick jest już zajęty.",
+            },
+          };
+          return jsonResponse(errorBody, { status: 409 });
+        }
+
+        console.error("Failed to create profile during register:", profileError);
+
         const errorBody: ErrorResponseBody = {
-          code: "NICK_TAKEN",
-          message: "Nick jest już zajęty.",
-          errors: {
-            nick: "Nick jest już zajęty.",
-          },
+          code: "INTERNAL_ERROR",
+          message: "Nie udało się utworzyć konta. Spróbuj ponownie.",
         };
-        return jsonResponse(errorBody, { status: 409 });
+        return jsonResponse(errorBody, { status: 500 });
       }
 
-      console.error("Failed to create profile during register:", profileError);
-
-      const errorBody: ErrorResponseBody = {
-        code: "INTERNAL_ERROR",
-        message: "Nie udało się utworzyć konta. Spróbuj ponownie.",
-      };
-      return jsonResponse(errorBody, { status: 500 });
+      profileNick = profile?.nick ?? rawNick;
+    } else {
+      console.warn(
+        "Skipping profile creation during register – no active session returned by Supabase.",
+      );
     }
 
     const successBody: RegisterSuccessBody = {
       userId,
-      nick: profile?.nick ?? rawNick,
+      nick: profileNick,
       email: userEmail,
     };
 

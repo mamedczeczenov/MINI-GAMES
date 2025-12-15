@@ -88,7 +88,6 @@ class OpenRouterError extends Error {
 
     if (options?.cause) {
       // Node >=16 supports the Error cause option; keep assignment for TS consumers.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (this as any).cause = options.cause;
     }
   }
@@ -96,8 +95,7 @@ class OpenRouterError extends Error {
   static fromApiResponse(status: number, body: unknown): OpenRouterError {
     const message =
       typeof body === 'object' && body !== null && 'error' in body
-        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (body as any).error?.message ?? 'Błąd w odpowiedzi OpenRouter'
+        ? (body as any).error?.message ?? 'Błąd w odpowiedzi OpenRouter'
         : 'Błąd w odpowiedzi OpenRouter';
 
     return new OpenRouterError('API_ERROR', message, { status, details: body });
@@ -366,7 +364,6 @@ class OpenRouterService {
     // Usuń wszystkie pola z wartością undefined, aby nie nadpisywać domyślnych ustawień API.
     Object.keys(body).forEach((key) => {
       if (body[key] === undefined) {
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete body[key];
       }
     });

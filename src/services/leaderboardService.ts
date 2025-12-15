@@ -510,11 +510,6 @@ async function getAiQuizAggregateLeaderboard(
       return;
     }
 
-    const percent =
-      totalQuestions > 0
-        ? Number(((totalCorrect / totalQuestions) * 100).toFixed(2))
-        : 0;
-
     items.push({
       rank: items.length + 1,
       user_id: userId,

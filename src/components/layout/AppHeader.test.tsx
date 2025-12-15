@@ -1,7 +1,14 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import type { AuthState } from "../../viewModels/homeViewModels";
 import AppHeader from "./AppHeader";
+
+vi.mock("../../services/authService", () => {
+  return {
+    getCurrentProfile: vi.fn().mockResolvedValue(null),
+    logout: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 vi.mock("../auth/AuthModal", () => {
   const MockAuthModal = (props: any) => {
@@ -21,7 +28,7 @@ vi.mock("../auth/AuthModal", () => {
 const guestAuthState: AuthState = { status: "guest" };
 
 describe("AppHeader", () => {
-  it("wyświetla stan gościa i przyciski logowania/rejestracji", () => {
+  it("wyświetla stan gościa i przyciski logowania/rejestracji", async () => {
     render(
       <AppHeader
         authState={guestAuthState}
@@ -30,45 +37,53 @@ describe("AppHeader", () => {
       />,
     );
 
-    expect(screen.getByText("Dreary Disk")).toBeInTheDocument();
-    expect(screen.getByText("Grasz jako gość")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Zaloguj się" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Zarejestruj się" }),
+      await screen.findByText("MINI GRY - RANKINGI I RYWALIZACJA"),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Grasz jako gość")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Zaloguj się" }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Zarejestruj się" }),
     ).toBeInTheDocument();
   });
 
-  it("otwiera modal logowania z zakładką login po kliknięciu 'Zaloguj się'", () => {
+  it("otwiera modal logowania z zakładką login po kliknięciu 'Zaloguj się'", async () => {
     const handleLoginClick = vi.fn();
 
     render(<AppHeader authState={guestAuthState} onLoginClick={handleLoginClick} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Zaloguj się" }));
+    const loginButton = await screen.findByRole("button", { name: "Zaloguj się" });
+    fireEvent.click(loginButton);
 
     expect(handleLoginClick).toHaveBeenCalledTimes(1);
 
-    const modal = screen.getByTestId("auth-modal");
+    const modal = await screen.findByTestId("auth-modal");
     expect(modal).toBeInTheDocument();
     expect(modal.getAttribute("data-initial-tab")).toBe("login");
   });
 
-  it("otwiera modal rejestracji z zakładką register po kliknięciu 'Zarejestruj się'", () => {
+  it("otwiera modal rejestracji z zakładką register po kliknięciu 'Zarejestruj się'", async () => {
     const handleRegisterClick = vi.fn();
 
     render(
       <AppHeader authState={guestAuthState} onRegisterClick={handleRegisterClick} />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Zarejestruj się" }));
+    const registerButton = await screen.findByRole("button", {
+      name: "Zarejestruj się",
+    });
+    fireEvent.click(registerButton);
 
     expect(handleRegisterClick).toHaveBeenCalledTimes(1);
 
-    const modal = screen.getByTestId("auth-modal");
+    const modal = await screen.findByTestId("auth-modal");
     expect(modal).toBeInTheDocument();
     expect(modal.getAttribute("data-initial-tab")).toBe("register");
   });
 
-  it("wyświetla stan zalogowanego użytkownika i przycisk wylogowania", () => {
+  it("wyświetla stan zalogowanego użytkownika i przycisk wylogowania", async () => {
     const authState: AuthState = {
       status: "authenticated",
       nick: "PlayerOne",
@@ -81,11 +96,15 @@ describe("AppHeader", () => {
       <AppHeader authState={authState} onLogoutClick={handleLogoutClick} />,
     );
 
-    expect(screen.getByText("Zalogowano jako")).toBeInTheDocument();
-    expect(screen.getByText("PlayerOne")).toBeInTheDocument();
+    expect(await screen.findByText("Zalogowano jako")).toBeInTheDocument();
+    expect(await screen.findByText("PlayerOne")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Wyloguj" }));
-    expect(handleLogoutClick).toHaveBeenCalledTimes(1);
+    const logoutButton = await screen.findByRole("button", { name: "Wyloguj" });
+    fireEvent.click(logoutButton);
+
+    await waitFor(() => {
+      expect(handleLogoutClick).toHaveBeenCalledTimes(1);
+    });
   });
 });
 

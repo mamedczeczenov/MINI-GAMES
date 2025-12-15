@@ -363,9 +363,9 @@ const TicTacToe: FC = () => {
           : "text-slate-500";
 
     return (
-      // eslint-disable-next-line react/button-has-type
       <button
         key={index}
+        type="button"
         onClick={handleClick}
         disabled={isDisabled || value !== null}
         className={`flex aspect-square items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/60 text-4xl font-bold shadow-sm shadow-slate-950/60 transition hover:border-sky-400/80 hover:bg-slate-900/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${

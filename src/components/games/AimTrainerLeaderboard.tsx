@@ -190,7 +190,7 @@ const AimTrainerLeaderboard: FC = () => {
                 });
 
                 const hits =
-                  item.hits ?? Number(item.score_value ?? 0) ?? undefined;
+                  item.hits ?? Number(item.score_value ?? 0);
 
                 return (
                   <tr
