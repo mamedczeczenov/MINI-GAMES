@@ -82,7 +82,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }} # Secret needed for Cloudflare API
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }} # Secret needed for Cloudflare Account ID
-          command: pages deploy dist --project-name='ai-rules-builder' # Use the command input
+          command: pages deploy dist --project-name='mini-games' # Use the command input
           gitHubToken: ${{ secrets.GITHUB_TOKEN }} # Optional: Adds commit details to deployments
         run: npm run build
 
