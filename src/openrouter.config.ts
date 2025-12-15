@@ -17,7 +17,23 @@ const apiKey =
 const defaultModel =
   import.meta.env.OPENROUTER_DEFAULT_MODEL ?? "openai/gpt-4o-mini";
 
-const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "http://localhost";
+/**
+ * Adres aplikacji używany jako HTTP-Referer dla OpenRouter.
+ *
+ * Kolejność źródeł:
+ * 1. PUBLIC_SITE_URL – możesz go ustawić ręcznie (np. na własną domenę).
+ * 2. CF_PAGES_URL – automatyczna domena Cloudflare Pages (np. https://mini-games.pages.dev).
+ * 3. Fallback:
+ *    - w dev: http://localhost:4321 (domyślny port Astro),
+ *    - w produkcji: https://mini-games.pages.dev (bezpieczny domyślny adres projektu).
+ *
+ * Dzięki temu ten sam kod działa lokalnie i po wdrożeniu na Cloudflare,
+ * także gdy w OpenRouter masz włączone ograniczenie domen dla klucza API.
+ */
+const siteUrl =
+  import.meta.env.PUBLIC_SITE_URL ??
+  import.meta.env.CF_PAGES_URL ??
+  (import.meta.env.DEV ? "http://localhost:4321" : "https://mini-games.pages.dev");
 
 // Prosty log pomocniczy do debugowania konfiguracji (tylko w dev).
 if (!apiKey) {
