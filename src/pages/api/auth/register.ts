@@ -129,9 +129,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return jsonResponse(errorBody, { status: 409 });
     }
 
+    // Ustal adres przekierowania po kliknięciu w link potwierdzający z maila.
+    // Dzięki temu Supabase nie będzie używać domyślnego localhost:3000.
+    const publicSiteUrl =
+      import.meta.env.PUBLIC_SITE_URL ?? new URL(request.url).origin;
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: publicSiteUrl,
+      },
     });
 
     if (error || !data?.user) {

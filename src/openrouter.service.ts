@@ -383,7 +383,8 @@ class OpenRouterService {
       Authorization: `Bearer ${this.apiKey}`,
       'HTTP-Referer': siteUrl,
       // Zgodnie z zaleceniami OpenRouter – prosta, rozpoznawalna nazwa aplikacji.
-      'X-Title': 'Local App',
+      // Dzięki temu na openrouter.ai w rankingach będzie widoczna Twoja nazwa.
+      'X-Title': 'Mini Games',
     };
   }
 

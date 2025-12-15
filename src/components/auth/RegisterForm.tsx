@@ -110,6 +110,11 @@ const RegisterForm: FC<RegisterFormProps> = ({
         setInfoMessage(
           "Konto zostało utworzone. Sprawdź swoją skrzynkę e‑mail i kliknij link aktywacyjny, aby potwierdzić konto.",
         );
+        if (typeof window !== "undefined") {
+          window.alert(
+            "Na podany adres e‑mail wysłaliśmy wiadomość z linkiem i instrukcją aktywacji konta.",
+          );
+        }
       } catch {
         setStatus("error");
         setFormError("Nie udało się utworzyć konta. Spróbuj ponownie.");
@@ -129,6 +134,11 @@ const RegisterForm: FC<RegisterFormProps> = ({
         "Konto zostało utworzone. Sprawdź swoją skrzynkę e‑mail i kliknij link aktywacyjny, aby potwierdzić konto.",
       );
       onSuccess?.(result);
+      if (typeof window !== "undefined") {
+        window.alert(
+          "Na podany adres e‑mail wysłaliśmy wiadomość z linkiem i instrukcją aktywacji konta.",
+        );
+      }
     } catch (error) {
       setStatus("error");
 
