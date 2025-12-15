@@ -372,11 +372,12 @@ class OpenRouterService {
   }
 
   private buildRequestHeaders(): HeadersInit {
-    const siteUrl =
-      this.config.siteUrl ??
-      // Astro często używa PUBLIC_SITE_URL jako adresu publicznego aplikacji.
-      process.env.PUBLIC_SITE_URL ??
-      'http://localhost';
+    // Uwaga:
+    // - w środowisku Cloudflare Workers / Pages nie ma `process.env`,
+    //   więc polegamy wyłącznie na `config.siteUrl` przekazanym z warstwy konfiguracyjnej
+    //   (tam używamy `import.meta.env.PUBLIC_SITE_URL` / `CF_PAGES_URL`),
+    // - fallbackiem zostaje localhost na potrzeby dev.
+    const siteUrl = this.config.siteUrl ?? 'http://localhost';
 
     return {
       'Content-Type': 'application/json',
