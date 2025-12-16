@@ -28,7 +28,7 @@ const defaultModel =
 const siteUrl =
   import.meta.env.PUBLIC_SITE_URL ??
   import.meta.env.CF_PAGES_URL ??
-  (import.meta.env.DEV ? "http://localhost:4321" : "https://mini-games.pages.dev");
+  (import.meta.env.DEV ? "http://localhost:4321" : "https://mini-games-yur.pages.dev");
 
 let cachedService: OpenRouterService | null = null;
 
