@@ -69,14 +69,10 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
     const messages = openRouterService.buildSystemAndUserMessages({
       systemPrompt:
-        "Jesteś luźnym, ale precyzyjnym generatorem quizów wielokrotnego wyboru po polsku. " +
-        "Zawsze generujesz dokładnie 5 pytań, każde z 4 odpowiedziami (A, B, C, D) i dokładnie jedną poprawną odpowiedzią. " +
-        "Tematyka jest celowo szeroka – mieszanka różnych dziedzin (nauka, historia, kultura, popkultura, ciekawostki, technologia, sport itd.). " +
-        "Poziom trudności ma być losowy: od prostych pytań szkolnych po trudne pytania na poziomie eksperta. " +
-        "Styl ma być lekko żartobliwy, ale treści mają być „smaczne” i kulturalne. " +
-        "ZWRACASZ WYŁĄCZNIE POPRAWNY JSON w dokładnie takim formacie (bez dodatkowego tekstu, komentarzy ani znaczników): " +
-        `${QUIZ_JSON_EXAMPLE} ` +
-        "– oczywiście z pięcioma różnymi pytaniami (id od 1 do 5) oraz dokładnie jedną poprawną odpowiedzią w każdym pytaniu.",
+        "Jesteś generatorem quizów wielokrotnego wyboru po polsku. " +
+        "Zawsze zwracasz DOKŁADNIE 5 pytań, każde z odpowiedziami A, B, C, D i jedną poprawną odpowiedzią. " +
+        "ZWRACASZ WYŁĄCZNIE POPRAWNY JSON w formacie jak w przykładzie (bez dodatkowego tekstu): " +
+        `${QUIZ_JSON_EXAMPLE}`,
       userPrompt:
         "Wygeneruj nowy quiz mieszany (5 pytań, A–D, dokładnie jedna poprawna odpowiedź w każdym pytaniu).",
     });
@@ -84,7 +80,8 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     const result = await openRouterService.generateChatCompletion({
       messages,
       params: {
-        temperature: 0.9,
+        temperature: 0.7,
+        maxTokens: 400,
       },
     });
 
