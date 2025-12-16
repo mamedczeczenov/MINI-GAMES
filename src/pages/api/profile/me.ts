@@ -6,6 +6,10 @@ import type { ProfileDto } from "../../../types";
 // aby mieć dostęp do sesji Supabase (cookie).
 export const prerender = false;
 
+// Ten sam wzorzec walidacji nicka, co w endpointzie rejestracji.
+// Utrzymujemy go lokalnie, aby uniknąć zależności cyklicznych.
+const nickRegex = /^[a-zA-Z0-9_]{3,20}$/;
+
 type ProfileErrorCode = "UNAUTHORIZED" | "INTERNAL_ERROR";
 
 interface ErrorResponseBody {
@@ -64,16 +68,64 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
     if (!profile) {
       // Jeśli użytkownik ma sesję, ale nie ma jeszcze rekordu w `profiles`,
-      // traktujemy go nadal jako zalogowanego, ale bez nicku.
-      const now = new Date().toISOString();
-      const fallbackProfile: ProfileDto = {
-        user_id: user.id,
-        nick: "gracz",
-        created_at: now,
-        updated_at: now,
-      };
+      // spróbuj utworzyć go na podstawie metadanych użytkownika z Supabase
+      // (ustawianych podczas rejestracji), a jeśli ich brak – użyj domyślnego nicka.
+      const rawMetaNick =
+        typeof (user.user_metadata as any)?.nick === "string"
+          ? ((user.user_metadata as any).nick as string).trim()
+          : "";
 
-      return jsonResponse<ProfileDto>(fallbackProfile, { status: 200 });
+      const candidateNick =
+        rawMetaNick && nickRegex.test(rawMetaNick) ? rawMetaNick : "gracz";
+
+      let createdProfile: ProfileDto | null = null;
+
+      try {
+        const {
+          data: insertedProfile,
+          error: insertError,
+        } = await supabase
+          .from("profiles")
+          .insert({
+            user_id: user.id,
+            nick: candidateNick,
+          })
+          .select("user_id, nick, created_at, updated_at")
+          .maybeSingle();
+
+        if (insertError) {
+          // W przypadku konfliktu unikalności (kod 23505) logujemy błąd
+          // i przechodzimy dalej, zwracając profil „w pamięci”, żeby UI
+          // nadal działało. Można tu później dodać generowanie alternatywnego nicka.
+          console.error(
+            "Failed to auto-create profile in /api/profile/me:",
+            insertError,
+          );
+        } else if (insertedProfile) {
+          createdProfile = {
+            user_id: insertedProfile.user_id,
+            nick: insertedProfile.nick,
+            created_at: insertedProfile.created_at,
+            updated_at: insertedProfile.updated_at,
+          };
+        }
+      } catch (insertUnexpectedError) {
+        console.error(
+          "Unexpected error while auto-creating profile in /api/profile/me:",
+          insertUnexpectedError,
+        );
+      }
+
+      const now = new Date().toISOString();
+      const effectiveProfile: ProfileDto =
+        createdProfile ?? ({
+          user_id: user.id,
+          nick: candidateNick,
+          created_at: now,
+          updated_at: now,
+        } as ProfileDto);
+
+      return jsonResponse<ProfileDto>(effectiveProfile, { status: 200 });
     }
 
     const responseBody: ProfileDto = {

@@ -139,6 +139,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       password,
       options: {
         emailRedirectTo: publicSiteUrl,
+        // Zachowujemy nick w metadanych użytkownika, aby móc go
+        // odtworzyć i utworzyć profil nawet wtedy, gdy Supabase
+        // nie zwróci od razu aktywnej sesji (np. przy wymaganym
+        // potwierdzeniu e‑maila).
+        data: {
+          nick: rawNick,
+        },
       },
     });
 

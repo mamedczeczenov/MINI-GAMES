@@ -8,8 +8,9 @@ const defaultModel =
 
 /**
  * Bezpieczne wykrywanie środowiska (dev / prod).
+ * W Astro / Vite dostępne są zarówno MODE, jak i DEV – obsługujemy oba.
  */
-const isDev = import.meta.env.MODE === "development";
+const isDev = import.meta.env.MODE === "development" || import.meta.env.DEV;
 
 /**
  * Adres aplikacji używany jako HTTP-Referer dla OpenRouter.
@@ -27,10 +28,20 @@ const siteUrl =
   (isDev ? "http://localhost:4321" : "https://mini-games-yur.pages.dev");
 
 /**
- * Zwraca nową instancję OpenRouterService skonfigurowaną na podstawie env.
+ * Pojedyncza, współdzielona instancja serwisu – bezpieczna w środowisku
+ * serverless (inicjalizacja leniwa, bez skutków ubocznych przy imporcie).
+ */
+let cachedService: OpenRouterService | null = null;
+
+/**
+ * Zwraca skonfigurowaną instancję OpenRouterService.
  * Używana wyłącznie po stronie serwera (endpointy Astro / middleware).
  */
 export function getOpenRouterService(): OpenRouterService {
+  if (cachedService) {
+    return cachedService;
+  }
+
   const apiKey =
     import.meta.env.OPENROUTER_API_KEY ??
     import.meta.env.OPENROUTER ??
@@ -43,19 +54,24 @@ export function getOpenRouterService(): OpenRouterService {
     );
   }
 
-  return new OpenRouterService({
+  // Dłuższy timeout w dev (wygoda), krótszy w produkcji (limity Cloudflare Edge).
+  const requestTimeoutMs = isDev ? 15_000 : 8_000;
+
+  cachedService = new OpenRouterService({
     apiKey,
     defaultModel,
     defaultParams: {
       temperature: 0.7,
       maxTokens: 512,
     },
-    // Cloudflare Edge ma limity czasu (~10s) – trzymamy się poniżej.
-    requestTimeoutMs: 6_000,
+    requestTimeoutMs,
     siteUrl,
     logger: (message, meta) => {
       // Prosty logger serwerowy – nie wypisujemy promptów ani pełnych odpowiedzi.
       console.error("[OpenRouterService]", message, meta ?? "");
     },
   });
+
+  return cachedService;
 }
+
