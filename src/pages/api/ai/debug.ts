@@ -9,6 +9,7 @@ type DebugSuccessBody = {
   model: string;
   text?: string;
   createdAt: string;
+  connectivity?: unknown;
 };
 
 type DebugErrorBody = {
@@ -19,6 +20,7 @@ type DebugErrorBody = {
   status?: number | null;
   isTransient?: boolean;
   details?: unknown;
+  connectivity?: unknown;
 };
 
 function jsonResponse<T>(body: T, init?: ResponseInit): Response {
@@ -31,7 +33,28 @@ function jsonResponse<T>(body: T, init?: ResponseInit): Response {
 }
 
 export const GET: APIRoute = async () => {
+  let connectivity: unknown = null;
+
   try {
+    // Prosty test surowego fetch do OpenRoutera – pomaga zdiagnozować problemy sieciowe na Cloudflare.
+    try {
+      const resp = await fetch("https://openrouter.ai/api/v1/models", {
+        method: "GET",
+      });
+
+      connectivity = {
+        ok: resp.ok,
+        status: resp.status,
+        statusText: resp.statusText,
+      };
+    } catch (e) {
+      connectivity = {
+        ok: false,
+        error:
+          e instanceof Error ? e.message : `Non-Error thrown: ${String(e)}`,
+      };
+    }
+
     const service = getOpenRouterService();
 
     const messages = service.buildSystemAndUserMessages({
@@ -53,6 +76,7 @@ export const GET: APIRoute = async () => {
       model: result.model,
       text: result.text,
       createdAt: result.createdAt.toISOString(),
+      connectivity,
     };
 
     return jsonResponse(body, { status: 200 });
@@ -66,6 +90,7 @@ export const GET: APIRoute = async () => {
         status: error.status ?? null,
         isTransient: error.isTransient,
         details: error.details,
+        connectivity,
       };
 
       const status =
