@@ -1,4 +1,5 @@
 import type { ProfileDto } from "../types";
+import { supabaseClient } from "../db/supabase.client";
 
 export interface LoginPayload {
   email: string;
@@ -565,85 +566,82 @@ interface ResetPasswordSuccessResponseBody {
 export async function resetPassword(
   payload: ResetPasswordPayload,
 ): Promise<void> {
-  let response: Response;
-
-  try {
-    response = await fetch("/api/auth/reset-password", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-  } catch {
+  // Funkcja działa tylko po stronie przeglądarki – wykorzystujemy tokeny
+  // przekazane w hashu URL przez Supabase (`type=recovery`).
+  if (typeof window === "undefined") {
     throw new ResetPasswordError(
-      "Nie udało się połączyć z serwerem. Sprawdź swoje połączenie i spróbuj ponownie.",
+      "Zmiana hasła jest dostępna tylko z poziomu przeglądarki.",
       {
-        status: 0,
-        code: "NETWORK_ERROR",
+        status: 400,
+        code: "INVALID_REQUEST",
       },
     );
   }
 
-  let data:
-    | ResetPasswordErrorResponseBody
-    | ResetPasswordSuccessResponseBody
-    | null = null;
+  const rawHash = window.location.hash ?? "";
+  const hash = rawHash.startsWith("#") ? rawHash.slice(1) : rawHash;
+  const params = new URLSearchParams(hash);
 
-  try {
-    data = (await response.json()) as
-      | ResetPasswordErrorResponseBody
-      | ResetPasswordSuccessResponseBody;
-  } catch {
-    data = null;
+  const type = params.get("type");
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+
+  if (type !== "recovery" || !accessToken || !refreshToken) {
+    throw new ResetPasswordError(
+      "Link do resetu hasła jest nieaktywny lub wygasł. Poproś o nową instrukcję.",
+      {
+        status: 401,
+        code: "UNAUTHORIZED",
+      },
+    );
   }
 
-  if (!response.ok) {
-    const status = response.status;
-    const body = data as ResetPasswordErrorResponseBody | null;
+  // Najpierw ustawiamy sesję na podstawie tokenów z linku.
+  const { error: sessionError } = await supabaseClient.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
 
-    const fieldErrors =
-      body?.errors && typeof body.errors === "object"
-        ? body.errors
-        : undefined;
+  if (sessionError) {
+    throw new ResetPasswordError(
+      "Nie udało się uwierzytelnić linku do resetu hasła. Poproś o nową instrukcję.",
+      {
+        status: 401,
+        code: "UNAUTHORIZED",
+      },
+    );
+  }
 
-    let code: ResetPasswordErrorCode = "UNKNOWN_ERROR";
+  // Następnie aktualizujemy hasło w Supabase.
+  const { error: updateError } = await supabaseClient.auth.updateUser({
+    password: payload.newPassword,
+  });
 
-    if (body?.code === "UNAUTHORIZED") {
-      code = "UNAUTHORIZED";
-    } else if (body?.code === "VALIDATION_ERROR") {
-      code = "VALIDATION_ERROR";
-    } else if (body?.code === "INVALID_REQUEST") {
-      code = "INVALID_REQUEST";
-    } else if (body?.code === "INTERNAL_ERROR") {
-      code = "INTERNAL_ERROR";
-    } else if (status === 401) {
-      code = "UNAUTHORIZED";
-    } else if (status === 400) {
-      code = "VALIDATION_ERROR";
-    } else if (status >= 500) {
-      code = "INTERNAL_ERROR";
-    }
+  if (updateError) {
+    // Supabase zwykle zwraca status 422 przy błędach walidacji hasła.
+    const status = (updateError as any)?.status ?? 400;
 
-    const messageFromBody = body?.message;
+    const isValidationError =
+      status === 422 ||
+      status === 400 ||
+      /password/i.test(updateError.message);
+
+    const code: ResetPasswordErrorCode = isValidationError
+      ? "VALIDATION_ERROR"
+      : "INTERNAL_ERROR";
 
     const message =
-      messageFromBody ??
-      (code === "UNAUTHORIZED"
-        ? "Link do resetu hasła jest nieaktywny lub wygasł. Poproś o nową instrukcję."
-        : code === "VALIDATION_ERROR"
-          ? "Hasło nie spełnia wymagań bezpieczeństwa."
-          : "Nie udało się zmienić hasła. Spróbuj ponownie.");
+      code === "VALIDATION_ERROR"
+        ? "Hasło nie spełnia wymagań bezpieczeństwa."
+        : "Nie udało się zmienić hasła. Spróbuj ponownie.";
 
     throw new ResetPasswordError(message, {
       status,
       code,
-      fieldErrors,
     });
   }
 
-  // Przy sukcesie nie zwracamy nic – UI korzysta z neutralnego komunikatu.
-  return;
+  // Przy sukcesie nie zwracamy nic – UI wykorzysta neutralny komunikat.
 }
 
 
