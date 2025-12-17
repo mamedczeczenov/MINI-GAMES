@@ -3,6 +3,10 @@ import { useState } from "react";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Text } from "../ui/Typography";
+import {
+  resetPassword,
+  ResetPasswordError,
+} from "../../services/authService";
 
 export interface ResetPasswordFormValues {
   newPassword: string;
@@ -63,20 +67,55 @@ const ResetPasswordForm: FC<ResetPasswordFormProps> = ({
       return;
     }
 
-    if (!onSubmit) {
-      setStatus("success");
-      setInfoMessage("Hasło zostało zmienione. Możesz teraz się zalogować.");
+    // Jeśli przekazano własny handler onSubmit, użyj go zamiast domyślnego wywołania API.
+    if (onSubmit) {
+      try {
+        setStatus("submitting");
+        await onSubmit(values);
+        setStatus("success");
+        setInfoMessage("Hasło zostało zmienione. Możesz teraz się zalogować.");
+      } catch {
+        setStatus("error");
+        setInfoMessage("Nie udało się zmienić hasła. Spróbuj ponownie.");
+      }
       return;
     }
 
     try {
       setStatus("submitting");
-      await onSubmit(values);
+      await resetPassword({ newPassword: values.newPassword });
       setStatus("success");
       setInfoMessage("Hasło zostało zmienione. Możesz teraz się zalogować.");
-    } catch {
+    } catch (error) {
       setStatus("error");
-      setInfoMessage("Nie udało się zmienić hasła. Spróbuj ponownie.");
+
+      if (error instanceof ResetPasswordError) {
+        if (error.code === "NETWORK_ERROR") {
+          setInfoMessage(
+            "Nie udało się połączyć z serwerem. Sprawdź swoje połączenie i spróbuj ponownie.",
+          );
+          return;
+        }
+
+        if (error.code === "UNAUTHORIZED") {
+          setInfoMessage(
+            "Link do resetu hasła jest nieaktywny lub wygasł. Poproś o nową instrukcję.",
+          );
+          return;
+        }
+
+        if (error.code === "VALIDATION_ERROR") {
+          setInfoMessage(
+            "Nowe hasło nie spełnia wymagań bezpieczeństwa. Spróbuj z innym hasłem.",
+          );
+          return;
+        }
+
+        setInfoMessage("Nie udało się zmienić hasła. Spróbuj ponownie.");
+        return;
+      }
+
+      setInfoMessage("Coś poszło nie tak. Spróbuj ponownie.");
     }
   };
 

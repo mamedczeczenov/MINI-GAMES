@@ -515,6 +515,138 @@ export async function requestPasswordReset(
   return;
 }
 
+// -----------------------------------------------------------------------------
+// Reset password (after clicking email link)
+// -----------------------------------------------------------------------------
+
+export interface ResetPasswordPayload {
+  newPassword: string;
+}
+
+export type ResetPasswordErrorCode =
+  | "INVALID_REQUEST"
+  | "VALIDATION_ERROR"
+  | "UNAUTHORIZED"
+  | "INTERNAL_ERROR"
+  | "NETWORK_ERROR"
+  | "UNKNOWN_ERROR";
+
+export class ResetPasswordError extends Error {
+  status: number;
+  code: ResetPasswordErrorCode;
+  fieldErrors?: Record<string, string>;
+
+  constructor(
+    message: string,
+    options: {
+      status: number;
+      code: ResetPasswordErrorCode;
+      fieldErrors?: Record<string, string>;
+    },
+  ) {
+    super(message);
+    this.name = "ResetPasswordError";
+    this.status = options.status;
+    this.code = options.code;
+    this.fieldErrors = options.fieldErrors;
+  }
+}
+
+interface ResetPasswordErrorResponseBody {
+  code?: string;
+  message?: string;
+  errors?: Record<string, string>;
+}
+
+interface ResetPasswordSuccessResponseBody {
+  message: string;
+}
+
+export async function resetPassword(
+  payload: ResetPasswordPayload,
+): Promise<void> {
+  let response: Response;
+
+  try {
+    response = await fetch("/api/auth/reset-password", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new ResetPasswordError(
+      "Nie udało się połączyć z serwerem. Sprawdź swoje połączenie i spróbuj ponownie.",
+      {
+        status: 0,
+        code: "NETWORK_ERROR",
+      },
+    );
+  }
+
+  let data:
+    | ResetPasswordErrorResponseBody
+    | ResetPasswordSuccessResponseBody
+    | null = null;
+
+  try {
+    data = (await response.json()) as
+      | ResetPasswordErrorResponseBody
+      | ResetPasswordSuccessResponseBody;
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const status = response.status;
+    const body = data as ResetPasswordErrorResponseBody | null;
+
+    const fieldErrors =
+      body?.errors && typeof body.errors === "object"
+        ? body.errors
+        : undefined;
+
+    let code: ResetPasswordErrorCode = "UNKNOWN_ERROR";
+
+    if (body?.code === "UNAUTHORIZED") {
+      code = "UNAUTHORIZED";
+    } else if (body?.code === "VALIDATION_ERROR") {
+      code = "VALIDATION_ERROR";
+    } else if (body?.code === "INVALID_REQUEST") {
+      code = "INVALID_REQUEST";
+    } else if (body?.code === "INTERNAL_ERROR") {
+      code = "INTERNAL_ERROR";
+    } else if (status === 401) {
+      code = "UNAUTHORIZED";
+    } else if (status === 400) {
+      code = "VALIDATION_ERROR";
+    } else if (status >= 500) {
+      code = "INTERNAL_ERROR";
+    }
+
+    const messageFromBody = body?.message;
+
+    const message =
+      messageFromBody ??
+      (code === "UNAUTHORIZED"
+        ? "Link do resetu hasła jest nieaktywny lub wygasł. Poproś o nową instrukcję."
+        : code === "VALIDATION_ERROR"
+          ? "Hasło nie spełnia wymagań bezpieczeństwa."
+          : "Nie udało się zmienić hasła. Spróbuj ponownie.");
+
+    throw new ResetPasswordError(message, {
+      status,
+      code,
+      fieldErrors,
+    });
+  }
+
+  // Przy sukcesie nie zwracamy nic – UI korzysta z neutralnego komunikatu.
+  return;
+}
+
+
 
 
 
