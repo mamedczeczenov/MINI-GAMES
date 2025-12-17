@@ -1,5 +1,4 @@
 import type { ProfileDto } from "../types";
-import { supabaseClient } from "../db/supabase.client";
 
 export interface LoginPayload {
   email: string;
@@ -566,8 +565,10 @@ interface ResetPasswordSuccessResponseBody {
 export async function resetPassword(
   payload: ResetPasswordPayload,
 ): Promise<void> {
-  // Funkcja działa tylko po stronie przeglądarki – wykorzystujemy tokeny
-  // przekazane w hashu URL przez Supabase (`type=recovery`).
+  let response: Response;
+
+  // Funkcja działa tylko po stronie przeglądarki – potrzebujemy dostępu
+  // do `window.location.hash`, żeby odczytać tokeny z linku resetującego.
   if (typeof window === "undefined") {
     throw new ResetPasswordError(
       "Zmiana hasła jest dostępna tylko z poziomu przeglądarki.",
@@ -596,52 +597,87 @@ export async function resetPassword(
     );
   }
 
-  // Najpierw ustawiamy sesję na podstawie tokenów z linku.
-  const { error: sessionError } = await supabaseClient.auth.setSession({
-    access_token: accessToken,
-    refresh_token: refreshToken,
-  });
-
-  if (sessionError) {
+  try {
+    response = await fetch("/api/auth/reset-password", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        newPassword: payload.newPassword,
+        accessToken,
+        refreshToken,
+      }),
+    });
+  } catch {
     throw new ResetPasswordError(
-      "Nie udało się uwierzytelnić linku do resetu hasła. Poproś o nową instrukcję.",
+      "Nie udało się połączyć z serwerem. Sprawdź swoje połączenie i spróbuj ponownie.",
       {
-        status: 401,
-        code: "UNAUTHORIZED",
+        status: 0,
+        code: "NETWORK_ERROR",
       },
     );
   }
 
-  // Następnie aktualizujemy hasło w Supabase.
-  const { error: updateError } = await supabaseClient.auth.updateUser({
-    password: payload.newPassword,
-  });
+  let data:
+    | ResetPasswordErrorResponseBody
+    | ResetPasswordSuccessResponseBody
+    | null = null;
 
-  if (updateError) {
-    // Supabase zwykle zwraca status 422 przy błędach walidacji hasła.
-    const status = (updateError as any)?.status ?? 400;
+  try {
+    data = (await response.json()) as
+      | ResetPasswordErrorResponseBody
+      | ResetPasswordSuccessResponseBody;
+  } catch {
+    data = null;
+  }
 
-    const isValidationError =
-      status === 422 ||
-      status === 400 ||
-      /password/i.test(updateError.message);
+  if (!response.ok) {
+    const status = response.status;
+    const body = data as ResetPasswordErrorResponseBody | null;
 
-    const code: ResetPasswordErrorCode = isValidationError
-      ? "VALIDATION_ERROR"
-      : "INTERNAL_ERROR";
+    const fieldErrors =
+      body?.errors && typeof body.errors === "object"
+        ? body.errors
+        : undefined;
+
+    let code: ResetPasswordErrorCode = "UNKNOWN_ERROR";
+
+    if (body?.code === "UNAUTHORIZED") {
+      code = "UNAUTHORIZED";
+    } else if (body?.code === "VALIDATION_ERROR") {
+      code = "VALIDATION_ERROR";
+    } else if (body?.code === "INVALID_REQUEST") {
+      code = "INVALID_REQUEST";
+    } else if (body?.code === "INTERNAL_ERROR") {
+      code = "INTERNAL_ERROR";
+    } else if (status === 401) {
+      code = "UNAUTHORIZED";
+    } else if (status === 400) {
+      code = "VALIDATION_ERROR";
+    } else if (status >= 500) {
+      code = "INTERNAL_ERROR";
+    }
+
+    const messageFromBody = body?.message;
 
     const message =
-      code === "VALIDATION_ERROR"
-        ? "Hasło nie spełnia wymagań bezpieczeństwa."
-        : "Nie udało się zmienić hasła. Spróbuj ponownie.";
+      messageFromBody ??
+      (code === "UNAUTHORIZED"
+        ? "Link do resetu hasła jest nieaktywny lub wygasł. Poproś o nową instrukcję."
+        : code === "VALIDATION_ERROR"
+          ? "Hasło nie spełnia wymagań bezpieczeństwa."
+          : "Nie udało się zmienić hasła. Spróbuj ponownie.");
 
     throw new ResetPasswordError(message, {
       status,
       code,
+      fieldErrors,
     });
   }
 
-  // Przy sukcesie nie zwracamy nic – UI wykorzysta neutralny komunikat.
+  // Przy sukcesie nie zwracamy nic – UI korzysta z neutralnego komunikatu.
+  return;
 }
 
 

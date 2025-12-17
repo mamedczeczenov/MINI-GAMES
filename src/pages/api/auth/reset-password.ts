@@ -5,6 +5,8 @@ export const prerender = false;
 
 interface ResetPasswordRequestBody {
   newPassword?: string;
+  accessToken?: string;
+  refreshToken?: string;
 }
 
 type ResetPasswordErrorCode =
@@ -49,6 +51,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const newPassword =
     typeof body.newPassword === "string" ? body.newPassword : "";
+  const accessToken =
+    typeof body.accessToken === "string" ? body.accessToken : "";
+  const refreshToken =
+    typeof body.refreshToken === "string" ? body.refreshToken : "";
 
   const fieldErrors: Record<string, string> = {};
 
@@ -73,8 +79,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers: request.headers,
     });
 
-    // Upewniamy się, że żądanie pochodzi z ważnej sesji „recovery”
-    // utworzonej po kliknięciu w link z e‑maila resetującego hasło.
+    // Jeśli przekazano tokeny z linku resetującego, najpierw próbujemy
+    // wymienić je na sesję po stronie Supabase (ustawi to ciasteczka).
+    if (accessToken && refreshToken) {
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+      if (sessionError || !sessionData?.session) {
+        const errorBody: ErrorResponseBody = {
+          code: "UNAUTHORIZED",
+          message:
+            "Link do resetu hasła jest nieaktywny lub wygasł. Poproś o nową instrukcję.",
+        };
+        return jsonResponse(errorBody, { status: 401 });
+      }
+    }
+
+    // Upewniamy się, że po wymianie tokenów mamy zalogowanego użytkownika
+    // w aktualnej sesji (recovery).
     const {
       data: { user },
       error: userError,
