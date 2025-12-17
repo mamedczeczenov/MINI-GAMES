@@ -74,6 +74,13 @@ type OpenRouterErrorOptions = {
   details?: unknown;
 };
 
+// Proste rozróżnienie między środowiskiem Node (dev / test) a edge/Workers (Cloudflare).
+// W Workers nie chcemy używać własnego AbortController/timeoutu – polegamy na natywnych limitach platformy.
+const isNodeEnvironment =
+  typeof process !== 'undefined' &&
+  !!(process as any).versions &&
+  !!(process as any).versions.node;
+
 class OpenRouterError extends Error {
   public readonly code: OpenRouterErrorCode;
   public readonly status?: number;
@@ -262,6 +269,17 @@ class OpenRouterService {
     }
 
     const requestBody = this.buildRequestBody(options);
+
+    // W środowiskach edge/Workers (Cloudflare) nie używamy własnego AbortController/timeoutu,
+    // bo mogą działać inaczej niż w Node i powodować trudne do zdiagnozowania błędy sieciowe.
+    // Zamiast tego polegamy na natywnych limitach platformy.
+    if (!isNodeEnvironment || !this.requestTimeoutMs || this.requestTimeoutMs <= 0) {
+      const raw = await this.executeWithRetry(() =>
+        this.doRequest('/chat/completions', requestBody),
+      );
+      return this.parseCompletion(raw);
+    }
+
     const controller = new AbortController();
     const { abortSignal } = options;
 
