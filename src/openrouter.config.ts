@@ -54,8 +54,10 @@ export function getOpenRouterService(): OpenRouterService {
     );
   }
 
-  // Dłuższy timeout w dev (wygoda), krótszy w produkcji (limity Cloudflare Edge).
-  const requestTimeoutMs = isDev ? 15_000 : 8_000;
+  // Dłuższy timeout w dev (wygoda), krótszy w produkcji (limity Cloudflare Workers).
+  // Cloudflare Workers ma limit 10s dla standardowych workerów, 30s dla Unbound.
+  // Używamy 9s aby zmieścić się w limicie 10s z marginesem.
+  const requestTimeoutMs = isDev ? 15_000 : 9_000;
 
   cachedService = new OpenRouterService({
     apiKey,

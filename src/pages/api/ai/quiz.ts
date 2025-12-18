@@ -60,8 +60,8 @@ export const GET: APIRoute = async () => {
     const result = await openRouterService.generateChatCompletion({
       messages,
       params: {
-        temperature: 0.7,
-        maxTokens: 400,
+        temperature: 0.5,
+        maxTokens: 300,
       },
     });
 

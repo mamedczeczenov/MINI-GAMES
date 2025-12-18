@@ -102,7 +102,9 @@ class OpenRouterError extends Error {
   }
 
   get isTransient(): boolean {
-    if (this.code === 'NETWORK_ERROR' || this.code === 'TIMEOUT') {
+    // TIMEOUT nie jest błędem przejściowym - jeśli przekroczyliśmy limit czasu,
+    // retry też prawdopodobnie przekroczy. Tylko NETWORK_ERROR może być przejściowy.
+    if (this.code === 'NETWORK_ERROR') {
       return true;
     }
 
@@ -263,13 +265,26 @@ class OpenRouterService {
 
     const requestBody = this.buildRequestBody(options);
 
-    // Uproszczone wywołanie: polegamy na natywnych limitach czasu platformy (Node / Cloudflare).
-    // Rezygnujemy z własnego AbortController/timeoutu, ponieważ w środowiskach edge
-    // potrafi to generować trudne do zdiagnozowania błędy sieciowe.
-    const raw = await this.executeWithRetry(() =>
-      this.doRequest('/chat/completions', requestBody),
-    );
-    return this.parseCompletion(raw);
+    // Używamy AbortController z timeoutem dla Cloudflare Workers (mają limit ~10s)
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
+    
+    if (controller && this.requestTimeoutMs) {
+      timeoutId = setTimeout(() => {
+        controller.abort();
+      }, this.requestTimeoutMs);
+    }
+
+    try {
+      const raw = await this.executeWithRetry(() =>
+        this.doRequest('/chat/completions', requestBody, controller?.signal),
+      );
+      return this.parseCompletion(raw);
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    }
   }
 
   private async executeWithRetry<T>(fn: () => Promise<T>): Promise<T> {
@@ -375,6 +390,17 @@ class OpenRouterService {
     } catch (error) {
       if (error instanceof OpenRouterError) {
         throw error;
+      }
+
+      // Sprawdź czy to timeout (AbortError)
+      if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
+        if (this.logger) {
+          this.logger('OpenRouterService timeout', { error, timeoutMs: this.requestTimeoutMs });
+        }
+
+        throw new OpenRouterError('TIMEOUT', `Przekroczono limit czasu żądania (${this.requestTimeoutMs}ms).`, {
+          cause: error,
+        });
       }
 
       if (this.logger) {
