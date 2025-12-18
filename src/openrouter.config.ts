@@ -2,10 +2,10 @@ import { OpenRouterService, OpenRouterError } from "./openrouter.service";
 
 /**
  * Domyślny model OpenRouter – można nadpisać przez OPENROUTER_DEFAULT_MODEL.
- * Używamy google/gemini-flash-1.5-8b bo jest szybki (2-4s) i mieści się w limicie Cloudflare Pages (10s).
+ * Używamy google/gemini-3-flash-preview bo jest najnowszy i obsługuje JSON response format.
  */
 const defaultModel =
-  import.meta.env.OPENROUTER_DEFAULT_MODEL ?? "google/gemini-flash-1.5-8b";
+  import.meta.env.OPENROUTER_DEFAULT_MODEL ?? "google/gemini-3-flash-preview";
 
 /**
  * Bezpieczne wykrywanie środowiska (dev / prod).
@@ -39,7 +39,8 @@ let cachedService: OpenRouterService | null = null;
  * Używana wyłącznie po stronie serwera (endpointy Astro / middleware).
  */
 export function getOpenRouterService(): OpenRouterService {
-  if (cachedService) {
+  // W dev mode zawsze tworzymy nową instancję, aby zmiany konfiguracji działały od razu
+  if (cachedService && !isDev) {
     return cachedService;
   }
 

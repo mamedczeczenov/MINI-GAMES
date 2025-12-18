@@ -82,7 +82,7 @@ export const GET: APIRoute = async () => {
           "X-Title": "Mini Games Debug",
         },
         body: JSON.stringify({
-          model: "google/gemini-flash-1.5-8b",
+          model: "google/gemini-3-flash-preview",
           messages: [{ role: "user", content: "Say 'pong'" }],
           max_tokens: 10,
         }),

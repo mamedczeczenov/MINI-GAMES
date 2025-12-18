@@ -50,18 +50,58 @@ export const GET: APIRoute = async () => {
     const messages = openRouterService.buildSystemAndUserMessages({
       systemPrompt:
         "Jesteś generatorem quizów wielokrotnego wyboru po polsku. " +
-        "Zawsze zwracasz DOKŁADNIE 5 pytań, każde z odpowiedziami A, B, C, D i jedną poprawną odpowiedzią. " +
-        "ZWRACASZ WYŁĄCZNIE POPRAWNY JSON w formacie jak w przykładzie (bez dodatkowego tekstu): " +
-        `${QUIZ_JSON_EXAMPLE}`,
+        "Zawsze zwracasz DOKŁADNIE 5 pytań, każde z odpowiedziami A, B, C, D i jedną poprawną odpowiedzią.",
       userPrompt:
         "Wygeneruj nowy quiz mieszany (5 pytań, A–D, dokładnie jedna poprawna odpowiedź w każdym pytaniu).",
     });
 
+    // Definicja JSON Schema dla wymuszenia poprawnego formatu odpowiedzi
+    const quizSchema = {
+      type: "object",
+      properties: {
+        questions: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "number" },
+              question: { type: "string" },
+              answers: {
+                type: "object",
+                properties: {
+                  A: { type: "string" },
+                  B: { type: "string" },
+                  C: { type: "string" },
+                  D: { type: "string" },
+                },
+                required: ["A", "B", "C", "D"],
+              },
+              correctAnswer: { 
+                type: "string",
+                enum: ["A", "B", "C", "D"]
+              },
+              explanation: { type: "string" },
+            },
+            required: ["id", "question", "answers", "correctAnswer"],
+          },
+          minItems: 5,
+          maxItems: 5,
+        },
+      },
+      required: ["questions"],
+    };
+
+    const responseFormat = openRouterService.buildJsonSchemaResponseFormat(
+      "quiz_response",
+      quizSchema
+    );
+
     const result = await openRouterService.generateChatCompletion({
       messages,
+      responseFormat,
       params: {
         temperature: 0.5,
-        maxTokens: 300,
+        maxTokens: 800, // Zwiększone dla 5 pytań z wyjaśnieniami
       },
     });
 
