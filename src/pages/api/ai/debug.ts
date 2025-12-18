@@ -10,6 +10,7 @@ type DebugSuccessBody = {
   text?: string;
   createdAt: string;
   connectivity?: unknown;
+  rawChatTest?: unknown;
 };
 
 type DebugErrorBody = {
@@ -21,6 +22,7 @@ type DebugErrorBody = {
   isTransient?: boolean;
   details?: unknown;
   connectivity?: unknown;
+  rawChatTest?: unknown;
 };
 
 function jsonResponse<T>(body: T, init?: ResponseInit): Response {
@@ -34,6 +36,7 @@ function jsonResponse<T>(body: T, init?: ResponseInit): Response {
 
 export const GET: APIRoute = async () => {
   let connectivity: unknown = null;
+  let rawChatTest: unknown = null;
 
   try {
     // Prosty test surowego fetch do OpenRoutera – pomaga zdiagnozować problemy sieciowe na Cloudflare.
@@ -42,17 +45,63 @@ export const GET: APIRoute = async () => {
         method: "GET",
       });
 
+      let responseBody = null;
+      try {
+        responseBody = await resp.text();
+      } catch {}
+
       connectivity = {
         ok: resp.ok,
         status: resp.status,
-        statusText: resp.status,
-        
+        statusText: resp.statusText,
+        headers: Object.fromEntries(resp.headers.entries()),
+        bodyPreview: responseBody?.substring(0, 500),
       };
     } catch (e) {
       connectivity = {
         ok: false,
         error:
           e instanceof Error ? e.message : `Non-Error thrown: ${String(e)}`,
+      };
+    }
+
+    // Test bezpośredniego wywołania chat/completions
+    try {
+      const apiKey = import.meta.env.OPENROUTER_API_KEY ?? import.meta.env.OPENROUTER ?? "";
+      const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? import.meta.env.CF_PAGES_URL ?? "http://localhost:4321";
+      
+      const chatResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "HTTP-Referer": siteUrl,
+          "Referer": siteUrl,
+          "X-Title": "Mini Games Debug",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-flash-1.5-8b",
+          messages: [{ role: "user", content: "Say 'pong'" }],
+          max_tokens: 10,
+        }),
+      });
+
+      let chatBody = null;
+      try {
+        chatBody = await chatResp.text();
+      } catch {}
+
+      rawChatTest = {
+        ok: chatResp.ok,
+        status: chatResp.status,
+        statusText: chatResp.statusText,
+        headers: Object.fromEntries(chatResp.headers.entries()),
+        bodyPreview: chatBody?.substring(0, 1000),
+      };
+    } catch (e) {
+      rawChatTest = {
+        ok: false,
+        error: e instanceof Error ? e.message : `Non-Error thrown: ${String(e)}`,
       };
     }
 
@@ -78,6 +127,7 @@ export const GET: APIRoute = async () => {
       text: result.text,
       createdAt: result.createdAt.toISOString(),
       connectivity,
+      rawChatTest,
     };
 
     return jsonResponse(body, { status: 200 });
@@ -92,6 +142,7 @@ export const GET: APIRoute = async () => {
         isTransient: error.isTransient,
         details: error.details,
         connectivity,
+        rawChatTest,
       };
 
       const status =
@@ -109,6 +160,8 @@ export const GET: APIRoute = async () => {
       type: "UnknownError",
       message:
         error instanceof Error ? error.message : "Unexpected non-error thrown",
+      connectivity,
+      rawChatTest,
     };
 
     return jsonResponse(unknownBody, { status: 500 });

@@ -369,6 +369,7 @@ class OpenRouterService {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${this.apiKey}`,
       'HTTP-Referer': siteUrl,
+      'Referer': siteUrl, // Cloudflare wymaga standardowego nagłówka Referer
       // Zgodnie z zaleceniami OpenRouter – prosta, rozpoznawalna nazwa aplikacji.
       // Dzięki temu na openrouter.ai w rankingach będzie widoczna Twoja nazwa.
       'X-Title': 'Mini Games',
