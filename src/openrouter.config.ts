@@ -2,9 +2,10 @@ import { OpenRouterService, OpenRouterError } from "./openrouter.service";
 
 /**
  * Domyślny model OpenRouter – można nadpisać przez OPENROUTER_DEFAULT_MODEL.
+ * Używamy google/gemini-flash-1.5-8b bo jest szybki (2-4s) i mieści się w limicie Cloudflare Pages (10s).
  */
 const defaultModel =
-  import.meta.env.OPENROUTER_DEFAULT_MODEL ?? "openai/gpt-4o-mini";
+  import.meta.env.OPENROUTER_DEFAULT_MODEL ?? "google/gemini-flash-1.5-8b";
 
 /**
  * Bezpieczne wykrywanie środowiska (dev / prod).
