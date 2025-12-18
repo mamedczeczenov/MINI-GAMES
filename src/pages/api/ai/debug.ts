@@ -45,7 +45,8 @@ export const GET: APIRoute = async () => {
       connectivity = {
         ok: resp.ok,
         status: resp.status,
-        statusText: resp.statusText,
+        statusText: resp.status,
+        
       };
     } catch (e) {
       connectivity = {

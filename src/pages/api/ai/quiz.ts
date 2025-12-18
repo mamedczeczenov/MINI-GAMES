@@ -1,7 +1,6 @@
 import type { APIRoute } from "astro";
 import { getOpenRouterService } from "../../../openrouter.config";
 import { OpenRouterError } from "../../../openrouter.service";
-import { createSupabaseServerInstance } from "../../../db/supabase.client";
 
 export const prerender = false;
 
@@ -26,7 +25,6 @@ type QuizErrorCode =
   | "OPENROUTER_CONFIG_ERROR"
   | "OPENROUTER_NETWORK_ERROR"
   | "OPENROUTER_API_ERROR"
-  | "UNAUTHORIZED"
   | "INTERNAL_ERROR";
 
 interface ErrorResponseBody {
@@ -43,28 +41,10 @@ function jsonResponse<T>(body: T, init?: ResponseInit): Response {
   });
 }
 
-export const GET: APIRoute = async ({ request, cookies }) => {
+export const GET: APIRoute = async () => {
   try {
-    // 1) Wymagamy zalogowanego użytkownika (sesja Supabase w cookies).
-    const supabase = createSupabaseServerInstance({
-      headers: request.headers,
-      cookies,
-    });
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      const errorBody: ErrorResponseBody = {
-        code: "UNAUTHORIZED",
-        message: "Musisz być zalogowany, aby korzystać z quizu AI.",
-      };
-      return jsonResponse(errorBody, { status: 401 });
-    }
-
-    // 2) Mamy poprawnie zalogowanego użytkownika – możemy korzystać z OpenRoutera.
+    // 1) Quiz jest dostępny dla wszystkich użytkowników (zalogowanych i niezalogowanych).
+    //    Wynik można zapisać tylko będąc zalogowanym (patrz endpoint [code]/score.ts).
     const openRouterService = getOpenRouterService();
 
     const messages = openRouterService.buildSystemAndUserMessages({

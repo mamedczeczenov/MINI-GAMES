@@ -74,13 +74,6 @@ type OpenRouterErrorOptions = {
   details?: unknown;
 };
 
-// Proste rozróżnienie między środowiskiem Node (dev / test) a edge/Workers (Cloudflare).
-// W Workers nie chcemy używać własnego AbortController/timeoutu – polegamy na natywnych limitach platformy.
-const isNodeEnvironment =
-  typeof process !== 'undefined' &&
-  !!(process as any).versions &&
-  !!(process as any).versions.node;
-
 class OpenRouterError extends Error {
   public readonly code: OpenRouterErrorCode;
   public readonly status?: number;
@@ -270,53 +263,13 @@ class OpenRouterService {
 
     const requestBody = this.buildRequestBody(options);
 
-    // W środowiskach edge/Workers (Cloudflare) nie używamy własnego AbortController/timeoutu,
-    // bo mogą działać inaczej niż w Node i powodować trudne do zdiagnozowania błędy sieciowe.
-    // Zamiast tego polegamy na natywnych limitach platformy.
-    if (!isNodeEnvironment || !this.requestTimeoutMs || this.requestTimeoutMs <= 0) {
-      const raw = await this.executeWithRetry(() =>
-        this.doRequest('/chat/completions', requestBody),
-      );
-      return this.parseCompletion(raw);
-    }
-
-    const controller = new AbortController();
-    const { abortSignal } = options;
-
-    let timeoutId: NodeJS.Timeout | undefined;
-
-    if (this.requestTimeoutMs && this.requestTimeoutMs > 0) {
-      timeoutId = setTimeout(() => {
-        controller.abort(
-          new OpenRouterError('TIMEOUT', 'Przekroczono limit czasu żądania do OpenRouter.'),
-        );
-      }, this.requestTimeoutMs);
-    }
-
-    if (abortSignal) {
-      if (abortSignal.aborted) {
-        controller.abort(abortSignal.reason);
-      } else {
-        abortSignal.addEventListener(
-          'abort',
-          () => {
-            controller.abort(abortSignal.reason);
-          },
-          { once: true },
-        );
-      }
-    }
-
-    try {
-      const raw = await this.executeWithRetry(() =>
-        this.doRequest('/chat/completions', requestBody, controller.signal),
-      );
-      return this.parseCompletion(raw);
-    } finally {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    }
+    // Uproszczone wywołanie: polegamy na natywnych limitach czasu platformy (Node / Cloudflare).
+    // Rezygnujemy z własnego AbortController/timeoutu, ponieważ w środowiskach edge
+    // potrafi to generować trudne do zdiagnozowania błędy sieciowe.
+    const raw = await this.executeWithRetry(() =>
+      this.doRequest('/chat/completions', requestBody),
+    );
+    return this.parseCompletion(raw);
   }
 
   private async executeWithRetry<T>(fn: () => Promise<T>): Promise<T> {
