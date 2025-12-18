@@ -32,6 +32,7 @@
   },
   "devDependencies": {
     "@astrojs/cloudflare": "^12.6.12",
+    "@astrojs/netlify": "^6.6.3",
     "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4.1.17",
     "@testing-library/jest-dom": "^6.6.3",

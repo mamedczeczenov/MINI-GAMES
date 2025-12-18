@@ -13,30 +13,30 @@ Stwórz plik `.env` w katalogu głównym projektu:
 OPENROUTER_API_KEY=sk-or-v1-your-key-here
 
 # Supabase Configuration
-PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-anon-key-here
 ```
 
-### Zmienne środowiskowe (Cloudflare Pages)
+### Zmienne środowiskowe (Netlify)
 
-**WAŻNE:** Cloudflare Pages wymaga ręcznej konfiguracji zmiennych środowiskowych w panelu:
+**WAŻNE:** Netlify wymaga ręcznej konfiguracji zmiennych środowiskowych w panelu:
 
-1. Zaloguj się do [Cloudflare Dashboard](https://dash.cloudflare.com)
-2. Przejdź do **Pages** → wybierz swój projekt
-3. Otwórz **Settings** → **Environment Variables**
-4. Dodaj następujące zmienne:
+1. Zaloguj się do [Netlify Dashboard](https://app.netlify.com)
+2. Przejdź do swojego projektu → **Site configuration** → **Environment variables**
+3. Dodaj następujące zmienne:
 
 | Zmienna | Typ | Opis |
 |---------|-----|------|
 | `OPENROUTER_API_KEY` | Secret | Klucz API z [OpenRouter](https://openrouter.ai/keys) |
-| `PUBLIC_SUPABASE_URL` | Public | URL projektu Supabase |
-| `PUBLIC_SUPABASE_ANON_KEY` | Public | Publiczny klucz Supabase |
+| `SUPABASE_URL` | Public | URL projektu Supabase |
+| `SUPABASE_KEY` | Public | Publiczny klucz Supabase (anon key) |
 
-5. **Pamiętaj:** Po dodaniu zmiennych musisz ponownie zbudować projekt (redeploy)
+4. **Pamiętaj:** Po dodaniu zmiennych Netlify automatycznie zrobi redeploy
 
-**Typowe problemy na Cloudflare:**
-- ❌ Błąd 503: Brak `OPENROUTER_API_KEY` w Environment Variables
-- ❌ "MISSING_API_KEY": Nie ustawiono zmiennej lub nie zrobiono redeploy po dodaniu
+**Typowe problemy na Netlify:**
+- ❌ Błąd 500: Brak `OPENROUTER_API_KEY` w Environment Variables
+- ❌ "MISSING_API_KEY": Nie ustawiono zmiennej w panelu Netlify
+- ❌ Build fail: Sprawdź czy wszystkie dependencies są zainstalowane (`npm install`)
 
 ## 🚀 Project Structure
 
@@ -72,6 +72,73 @@ All commands are run from the root of the project, from a terminal:
 | `npm run preview`         | Preview your build locally, before deploying     |
 | `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
 | `npm run astro -- --help` | Get help using the Astro CLI                     |
+
+## 🚀 Deployment na Netlify
+
+### Krok 1: Przygotowanie projektu
+
+Upewnij się, że masz wszystkie pliki konfiguracyjne (projekt już je zawiera):
+- ✅ `netlify.toml` - konfiguracja buildu
+- ✅ `astro.config.mjs` - z adapterem `@astrojs/netlify`
+- ✅ `env.template` - przykład zmiennych środowiskowych
+
+### Krok 2: Deploy przez Netlify CLI (opcja 1)
+
+```bash
+# Zainstaluj Netlify CLI globalnie
+npm install -g netlify-cli
+
+# Zaloguj się do Netlify
+netlify login
+
+# Zainicjuj nowy projekt Netlify
+netlify init
+
+# Deploy na produkcję
+netlify deploy --prod
+```
+
+### Krok 3: Deploy przez GitHub/GitLab (opcja 2 - zalecana)
+
+1. Wypchnij kod do repozytorium na GitHub/GitLab
+2. Zaloguj się do [Netlify](https://app.netlify.com)
+3. Kliknij **"Add new site"** → **"Import an existing project"**
+4. Wybierz swoje repozytorium
+5. Netlify automatycznie wykryje ustawienia z `netlify.toml`:
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+
+### Krok 4: Konfiguracja zmiennych środowiskowych
+
+Po utworzeniu projektu na Netlify:
+
+1. Przejdź do **Site configuration** → **Environment variables**
+2. Dodaj wymagane zmienne (patrz sekcja wyżej)
+3. Netlify automatycznie wykona redeploy
+
+### Weryfikacja deploymentu
+
+Po deploymencie sprawdź:
+- ✅ Strona główna ładuje się poprawnie
+- ✅ Gry działają bez błędów
+- ✅ Funkcje AI odpowiadają (wymaga `OPENROUTER_API_KEY`)
+- ✅ Autoryzacja przez Supabase działa
+
+### Przydatne komendy Netlify CLI
+
+```bash
+# Podgląd buildu lokalnie
+netlify build
+
+# Deploy na środowisko testowe (draft)
+netlify deploy
+
+# Otwórz panel projektu w przeglądarce
+netlify open
+
+# Sprawdź logi
+netlify logs:function
+```
 
 ## 👀 Want to learn more?
 
