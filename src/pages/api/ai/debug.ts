@@ -48,7 +48,9 @@ export const GET: APIRoute = async () => {
       let responseBody = null;
       try {
         responseBody = await resp.text();
-      } catch {}
+      } catch {
+        // Ignore text parsing errors
+      }
 
       connectivity = {
         ok: resp.ok,
@@ -89,7 +91,9 @@ export const GET: APIRoute = async () => {
       let chatBody = null;
       try {
         chatBody = await chatResp.text();
-      } catch {}
+      } catch {
+        // Ignore text parsing errors
+      }
 
       rawChatTest = {
         ok: chatResp.ok,
