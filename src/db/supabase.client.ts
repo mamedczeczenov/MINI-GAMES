@@ -3,8 +3,23 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "./database.types";
 
-const supabaseUrl = import.meta.env.SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.SUPABASE_KEY;
+// Prefer explicit SUPABASE_* keys; keep PUBLIC_* as secondary fallback.
+// Also allow reading from process.env when running in Node.
+const metaEnv =
+  typeof import.meta !== 'undefined' && (import.meta as any)?.env
+    ? (import.meta as any).env
+    : {};
+const nodeEnv = typeof process !== 'undefined' ? process.env : {};
+const env = { ...metaEnv, ...nodeEnv };
+
+const supabaseUrl = env.SUPABASE_URL || env.SUPABASE_URL;
+const supabaseAnonKey = env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    "[supabase] Missing SUPABASE_URL and SUPABASE_KEY (anon key for browser)",
+  );
+}
 const isProd = import.meta.env.PROD;
 
 /**

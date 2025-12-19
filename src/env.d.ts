@@ -14,6 +14,9 @@ declare global {
 interface ImportMetaEnv {
   readonly SUPABASE_URL: string;
   readonly SUPABASE_KEY: string;
+  readonly SUPABASE_DB_URL?: string;
+  readonly SUPABASE_URL?: string;
+  readonly SUPABASE_KEY?: string;
   readonly OPENROUTER_API_KEY?: string;
   readonly OPENROUTER?: string;
   readonly OPENROUTER_DEFAULT_MODEL?: string;
